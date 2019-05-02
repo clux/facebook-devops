@@ -19,7 +19,7 @@ NOTES:
 - Will touch our public tooling and helm.
 
 ---
-<!-- .slide: data-background-image="/chef.gif" data-background-size="100% auto" class="color"-->
+<!-- .slide: data-background-image="./chef.gif" data-background-size="100% auto" class="color"-->
 
 notes:
 - so glad on kube => deployments.
@@ -29,7 +29,7 @@ notes:
 - imply we can deploy as fast as we want.
 
 ---
-<!-- .slide: data-background-image="/rolling.gif" data-background-size="100% auto" class="color"-->
+<!-- .slide: data-background-image="./rolling.gif" data-background-size="100% auto" class="color"-->
 <img src="./kube.png" style="border: none; opacity: 0.7; width: 120px; position: absolute; top: 60px; right: 120px" />
 notes:
 - and we've definitely gone all out on this
@@ -114,7 +114,7 @@ notes:
 ---
 
 <!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
-<!-- .slide: data-background-image="/morty-steps.png" data-background-size="100% auto" style="color: #000;" class="color"-->
+<!-- .slide: data-background-image="./morty-steps.png" data-background-size="100% auto" style="color: #000;" class="color"-->
 
 
 <div style="position: relative; text-align: left; top: 450px; left: 415px; font-size: 24px">x: <br/>&nbsp;&nbsp;&nbsp;&nbsp;{{ toYaml .Values.X | indent 10 }}</div>
@@ -126,7 +126,7 @@ notes:
 - what happened to using an API? we could have had static type checks on this!
 
 ---
-<!-- .slide: data-background-image="/massage.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+<!-- .slide: data-background-image="./massage.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
 
 <div style="position: relative; top: 100px; left: 0px; font-size: 30px; overflow: visible;">{{- include "cont-env" (merge (dict "root" $) .Values.env) | trim | nindent 8 }}</div>
 
@@ -139,7 +139,7 @@ notes:
 - but there's hope; helm 3 coming around
 
 ---
-<!-- .slide: data-background-image="/zapp.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+<!-- .slide: data-background-image="./zapp.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
 
 <div style="position: relative; top: 100px; left: 500px; font-size: 30px; overflow: visible;">Lua</div>
 
@@ -335,7 +335,7 @@ notes:
 - secret lookup encoded in there as well, kind of simplistic
 
 ---
-<!-- .slide: data-background-image="/cop.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+<!-- .slide: data-background-image="./cop.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
 
 <div style="position: relative; top: 420px; left: 0px; font-size: 30px; overflow: visible;">helm upgrade --install</div>
 
@@ -344,7 +344,7 @@ notes:
 - releases have FAILED/PENDING/DEPLOYED states
 
 ---
-<!-- .slide: data-background-image="/science.gif" data-background-size="100% auto" style="color: #000;" class="color"-->
+<!-- .slide: data-background-image="./science.gif" data-background-size="100% auto" style="color: #000;" class="color"-->
 
 <div style="position: relative; top: 350px; left: -280px; font-size: 30px; overflow: visible;">Error: UPGRADE FAILED: "svc" has no deployed releases</div>
 
@@ -356,7 +356,7 @@ notes:
 - however...
 
 ---
-<!-- .slide: data-background-image="/guesswork.gif" data-background-size="100% auto" style="color: #2fa;" -->
+<!-- .slide: data-background-image="./guesswork.gif" data-background-size="100% auto" style="color: #2fa;" -->
 
 <div style="position: relative; top: -320px; font-size: 36px">helm upgrade --wait --timeout=300</div>
 
@@ -367,7 +367,7 @@ notes:
 * We only needed simple bool for notifies; link to logs + job in channel!
 
 ---
-<!-- .slide: data-background-image="/what.gif" data-background-size="100% auto" style="color: #2fa;" -->
+<!-- .slide: data-background-image="./what.gif" data-background-size="100% auto" style="color: #2fa;" -->
 
 <div style="position: relative; top: -320px; font-size: 36px">please wait <i>n</i> seconds</div>
 
@@ -507,7 +507,7 @@ notes:
 - seriously; start with helm templates, just don't use tiller, pipe.
 
 ---
-<!-- .slide: data-background-image="/applause.gif" data-background-size="100% auto" class="color"-->
+<!-- .slide: data-background-image="./applause.gif" data-background-size="100% auto" class="color"-->
 ---
 <!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
 

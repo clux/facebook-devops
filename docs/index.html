@@ -48,7 +48,7 @@
 <li>deploy,rs,rupgrade best selling points of kube.</li>
 <li>imply we can deploy as fast as we want.</li>
 </ul>
-</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/rolling.gif" data-background-size="100% auto" class="color"-->
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="./rolling.gif" data-background-size="100% auto" class="color"-->
 <img src="./kube.png" style="border: none; opacity: 0.7; width: 120px; position: absolute; top: 60px; right: 120px" />
 <aside class="notes"><ul>
 <li>and we&#39;ve definitely gone all out on this</li>
@@ -129,7 +129,7 @@ spec:
 </ul>
 </aside></script></section><section  data-markdown><script type="text/template">
 <!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
-<!-- .slide: data-background-image="/morty-steps.png" data-background-size="100% auto" style="color: #000;" class="color"-->
+<!-- .slide: data-background-image="./morty-steps.png" data-background-size="100% auto" style="color: #000;" class="color"-->
 
 
 <div style="position: relative; text-align: left; top: 450px; left: 415px; font-size: 24px">x: <br/>&nbsp;&nbsp;&nbsp;&nbsp;{{ toYaml .Values.X | indent 10 }}</div>
@@ -140,7 +140,7 @@ spec:
 <li>hard to justify one chart approach with multi-stage yaml when just go down one code path anyway?</li>
 <li>what happened to using an API? we could have had static type checks on this!</li>
 </ul>
-</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/massage.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="./massage.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
 
 <div style="position: relative; top: 100px; left: 0px; font-size: 30px; overflow: visible;">{{- include "cont-env" (merge (dict "root" $) .Values.env) | trim | nindent 8 }}</div>
 
@@ -152,7 +152,7 @@ spec:
 <li>breathe...</li>
 <li>but there&#39;s hope; helm 3 coming around</li>
 </ul>
-</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/zapp.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="./zapp.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
 
 <div style="position: relative; top: 100px; left: 500px; font-size: 30px; overflow: visible;">Lua</div>
 
@@ -339,7 +339,7 @@ metadata:
 <li>complete look</li>
 <li>secret lookup encoded in there as well, kind of simplistic</li>
 </ul>
-</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/cop.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="./cop.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
 
 <div style="position: relative; top: 420px; left: 0px; font-size: 30px; overflow: visible;">helm upgrade --install</div>
 
@@ -347,7 +347,7 @@ metadata:
 <li>let&#39;s talk about helm upgrades</li>
 <li>releases have FAILED/PENDING/DEPLOYED states</li>
 </ul>
-</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/science.gif" data-background-size="100% auto" style="color: #000;" class="color"-->
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="./science.gif" data-background-size="100% auto" style="color: #000;" class="color"-->
 
 <div style="position: relative; top: 350px; left: -280px; font-size: 30px; overflow: visible;">Error: UPGRADE FAILED: "svc" has no deployed releases</div>
 
@@ -358,7 +358,7 @@ metadata:
 <li>yeah, cluster recovery bit of a pain, but w/e</li>
 <li>however...</li>
 </ul>
-</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/guesswork.gif" data-background-size="100% auto" style="color: #2fa;" -->
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="./guesswork.gif" data-background-size="100% auto" style="color: #2fa;" -->
 
 <div style="position: relative; top: -320px; font-size: 36px">helm upgrade --wait --timeout=300</div>
 
@@ -368,7 +368,7 @@ metadata:
 <li>History LIMIT &lt;- why: helm ls</li>
 <li>We only needed simple bool for notifies; link to logs + job in channel!</li>
 </ul>
-</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/what.gif" data-background-size="100% auto" style="color: #2fa;" -->
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="./what.gif" data-background-size="100% auto" style="color: #2fa;" -->
 
 <div style="position: relative; top: -320px; font-size: 36px">please wait <i>n</i> seconds</div>
 
@@ -500,7 +500,7 @@ Do YOU need tiller? helm?
 <li>templating -&gt; a totally sane industry standard</li>
 <li>seriously; start with helm templates, just don&#39;t use tiller, pipe.</li>
 </ul>
-</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/applause.gif" data-background-size="100% auto" class="color"--></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="./applause.gif" data-background-size="100% auto" class="color"--></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
 
 ## Thank you
 
