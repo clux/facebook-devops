@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <title>reveal-md</title>
+        <link rel="stylesheet" href="./css/reveal.css">
+        <link rel="stylesheet" href="./css/theme/black.css" id="theme">
+        <link rel="stylesheet" href="./css/highlight/zenburn.css">
+        <link rel="stylesheet" href="./css/print/paper.css" type="text/css" media="print">
+
+
+    </head>
+    <body>
+
+        <div class="reveal">
+            <div class="slides"><section  data-markdown><script type="text/template">
+<!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+
+### Fast & secure config-managed kubernetes continuous delivery
+
+- Eirik Albrigtsen : [github.com/clux](https://github.com/clux)
+- Babylon Health : [github.com/Babylonpartners](https://github.com/Babylonpartners)
+
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 0px" />
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 140px" />
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 280px" />
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 420px" />
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 560px" />
+
+<aside class="notes"><ul>
+<li>Hi. Eirik. Platform, this is Buzzword Title.</li>
+<li>&quot;Things to maybe consider when designing a CD system on kube&quot;</li>
+<li>Not prescribing a particlar tool for the job here, just strategies</li>
+<li>Will touch our public tooling and helm.</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/chef.gif" data-background-size="100% auto" class="color"-->
+
+<aside class="notes"><ul>
+<li>so glad on kube =&gt; deployments.</li>
+<li>never want to be doing chef surgery again</li>
+<li>not that the tool is necessarily bad, but wrong pattern; handover</li>
+<li>deploy,rs,rupgrade best selling points of kube.</li>
+<li>imply we can deploy as fast as we want.</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/rolling.gif" data-background-size="100% auto" class="color"-->
+<img src="./kube.png" style="border: none; opacity: 0.7; width: 120px; position: absolute; top: 60px; right: 120px" />
+<aside class="notes"><ul>
+<li>and we&#39;ve definitely gone all out on this</li>
+<li>context: kube 1y ago, 400 devs, 400 microservices, in ~20 clusters</li>
+<li>managing all this is a complex problem</li>
+<li>what I&#39;m covering might not be relevant unless you req. stupid scale</li>
+<li>we have found some speedbumps and patterns</li>
+<li>anyway; onto serious part of presentation, workflow :shrug:</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" -->
+Desired flow
+
+```sh
+dev → git app repo x → ci ↘
+dev → git app repo y → ci → registry ??? kubernetes
+dev → git app repo z → ci ↗
+```
+
+<aside class="notes"><ul>
+<li>teams own app repos, all managing own ci (image build, tests)</li>
+<li>? =&gt; anything. webhook from registry hitting a job doing rolling upgrade (mention later)</li>
+<li>where is the yaml? no standards? chart museum, but hard to verify changes to it. hard to recreate if a cluster goes down.</li>
+<li>i cannot believe i am at facebook advocating for monorepos :shrug:</li>
+<li>pause..</li>
+<li>but more specifically, a yaml monorepo</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+
+Definitions?
+
+<ul>
+  <li class="fragment">What is a service?</li>
+  <li class="fragment">What distinguishes them?</li>
+  <li class="fragment">What abstractions do we want?</li>
+</li>
+
+<aside class="notes"><ul>
+<li>q1 maths bg =&gt; asking &quot;what do you mean by X?&quot;</li>
+<li>kube answer, full shebang comparison, dev shielding</li>
+<li>dev answer,  (image, tag, yaml) - want them to recognise parts of yaml</li>
+<li>q2 ports, resource use, replicas, evars, health</li>
+<li>q3 many different ways of accomplishing similar results</li>
+<li>but less variance gives an easier system to make global change to</li>
+<li>get sensible defaults, needed: no health check, no resources, no sa</li>
+<li>avoid loading complexity on all devs when enforcing</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: class="color" style="min-width: 100%" -->
+helm charts
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: {{ .Values.name }}
+        command:
+{{ toYaml .Values.command | indent 8 }}
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        ports:
+```
+```yaml
+{{- range $p := .Values.ports }}
+        - name: {{ $p.name }}
+          containerPort: {{ $p.port }}
+          protocol: {{ $p.protocol }}
+{{- end }}
+```
+
+<aside class="notes"><ul>
+<li>follow ticketmasters one chart to rule them all approach (good talk)</li>
+<li>natural conclusion: a general chart - easier than forking. looks like this ^</li>
+<li>test is trying out all paths for the template (slow/kubeval/diff)</li>
+<li>strange read, these charts. weird tpl fns, indent pattern:why 8 != 10?</li>
+<li>step back: tpl yaml, takes yaml, passed.to.toYaml - then indented..</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template">
+<!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+<!-- .slide: data-background-image="/morty-steps.png" data-background-size="100% auto" style="color: #000;" class="color"-->
+
+
+<div style="position: relative; text-align: left; top: 450px; left: 415px; font-size: 24px">x: <br/>&nbsp;&nbsp;&nbsp;&nbsp;{{ toYaml .Values.X | indent 10 }}</div>
+
+
+<aside class="notes"><ul>
+<li>really convoluted assignment</li>
+<li>hard to justify one chart approach with multi-stage yaml when just go down one code path anyway?</li>
+<li>what happened to using an API? we could have had static type checks on this!</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/massage.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+
+<div style="position: relative; top: 100px; left: 0px; font-size: 30px; overflow: visible;">{{- include "cont-env" (merge (dict "root" $) .Values.env) | trim | nindent 8 }}</div>
+
+<aside class="notes"><ul>
+<li>but instead we massaging yaml into this shit just to pass two arguments to a fn</li>
+<li>and instead i have to do a cluster wide helm diff when changing a template</li>
+<li>cause that&#39;s the implication of a massive chart without types</li>
+<li>and this isn&#39;t even the most controversial parts of helm</li>
+<li>breathe...</li>
+<li>but there&#39;s hope; helm 3 coming around</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/zapp.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+
+<div style="position: relative; top: 100px; left: 500px; font-size: 30px; overflow: visible;">Lua</div>
+
+<aside class="notes"><ul>
+<li>they&#39;re putting lua inside of it!</li>
+<li>this will probably FIX EVERYTHING.</li>
+<li>-&gt; anyway, so i was talking monorepos, right?</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" -->
+Desired config management repo
+
+```sh
+manifests
+ ├── config.yml
+ └── services
+     ├── blog
+     │   └── manifest.yml
+     └── webapp
+         ├── staging.yml
+         ├── prod.yml
+         ├── prod-uk.yml
+         ├── prod-ca.yml
+         └── manifest.yml
+```
+<aside class="notes"><ul>
+<li>config monorepo =&gt; paper trail (medical company)</li>
+<li>sanity checks with req. statuses (b4 admission ctrls were ez)</li>
+<li>quick feedback, easy to catch mistakes, self-service (can self checks)</li>
+<li>want developers to be dealing with a PaaS (no proliferation of kube yaml)</li>
+<li>default manifest, overrideable by environment, and by region</li>
+<li>logging -&gt; dev, autoScaling -&gt; prod</li>
+<li>base defaults (cfgs for region and org) -&gt; less stuff in charts</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" -->
+Upgrade flow
+
+```sh
+dev → git app repo x → ci ↘
+dev → git app repo y → ci → registry → kubernetes
+dev → git app repo z → ci ↗
+```
+
+```sh
+dev ↘
+dev → git manifest repo → ci → kubernetes
+dev ↗
+```
+
+<aside class="notes"><ul>
+<li>two flows for such a system; top flow for staging/rolling environments</li>
+<li>reconciliation loop always active (talk later): versions hardcoded 4 prod</li>
+<li>either case, need a valid manifest for every service regardless</li>
+<li>(flux similar flow diag)</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+shipcat 🚢😾
+
+<ul>
+  <li class="fragment">Defines `Manifest`</li>
+  <li class="fragment">Defines `Config`</li>
+  <li class="fragment">Converts them to CRDs from filesystem</li>
+  <li class="fragment">Versions our platform</li>
+</li>
+
+<aside class="notes"><ul>
+<li>rust tool for standardisation, is open source; but not selling it here</li>
+<li>trying to keep it untied from our platform - but obvious feature parity</li>
+<li>whitelist features for k8s</li>
+<li>tons of validation; typed yaml,  &gt;&gt; templates</li>
+<li>useable abstraction - crds become an api, tests can get canonical info</li>
+<li>versioning: same as rust; shout at you until you get it right</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+
+shipcat cli
+
+```bash
+shipcat values webapp    # <-> helm get values
+shipcat template webapp  # <-> helm template {basechart}
+shipcat apply webapp     # <-> helm upgrade --install
+shipcat validate webapp  # --- helm lint
+```
+
+
+<aside class="notes"><ul>
+<li>leverages helm for templating, and other things (for now)</li>
+<li>acts on a kube context</li>
+<li>CD tool - useable by devs</li>
+<li>validation: reduces criticality of chart (specifics later)</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template">
+<!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+
+Resources interface
+
+```yaml
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 500Mi
+```
+
+<aside class="notes"><ul>
+<li>sanity errors (max 32GB per replica - largest kube node)</li>
+<li>req &gt; lim</li>
+<li>extra validation: missing structs / naming errors (deny_unknown_fields)</li>
+<li>typos: request: typos most common error; typos cascade weirdly</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template">
+<!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+
+Configs interface
+
+```yaml
+configs:
+  mount: /config/
+  files:
+  - name: logging.conf.j2
+    dest: logging.conf
+  - name: newrelic-python.ini.j2
+    dest: newrelic.ini
+```
+
+<aside class="notes"><ul>
+<li>abstraction around config files because of common patterns:<ul>
+<li>newrelic configs injected in a lot of pods</li>
+<li>python logging configuration files</li>
+</ul>
+</li>
+<li>provides an easy wrapper around all the yaml you need in kube to:<ul>
+<li>template then inline large configs in a ConfigMap</li>
+<li>use the configmap as a volume</li>
+<li>volume mount each file in the config map onto the file system (want individually!)</li>
+</ul>
+</li>
+<li>can check that templates render</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template">
+<!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+
+Metadata interface
+
+```yaml
+metadata:
+  team: Platform
+  repo: https://github.com/clux/webapp-rs
+```
+
+<aside class="notes"><ul>
+<li>not used by kube, accountability, although people do labels for this</li>
+<li>team unique key, team needs slack channels set, github admins teams</li>
+<li>used to generate vault policies, notifications with links to github diffs</li>
+<li>soon rbac policies for namespaces</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template">```yaml
+name: webapp
+image: clux/webapp-rs
+version: 0.2.0
+env:
+  DATABASE_URL: IN_VAULT
+resources:
+  requests:
+    cpu: 50m
+    memory: 100Mi
+  limits:
+    cpu: 200m
+    memory: 200Mi
+replicaCount: 2
+```
+```yaml
+health:
+  uri: /health
+httpPort: 8000
+regions:
+- minikube
+metadata:
+  team: Platform
+  repo: https://github.com/clux/webapp-rs
+```
+<aside class="notes"><ul>
+<li>complete look</li>
+<li>secret lookup encoded in there as well, kind of simplistic</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/cop.gif" data-background-size="100% auto" style="color: #ff0;" class="color"-->
+
+<div style="position: relative; top: 420px; left: 0px; font-size: 30px; overflow: visible;">helm upgrade --install</div>
+
+<aside class="notes"><ul>
+<li>let&#39;s talk about helm upgrades</li>
+<li>releases have FAILED/PENDING/DEPLOYED states</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/science.gif" data-background-size="100% auto" style="color: #000;" class="color"-->
+
+<div style="position: relative; top: 350px; left: -280px; font-size: 30px; overflow: visible;">Error: UPGRADE FAILED: "svc" has no deployed releases</div>
+
+<aside class="notes"><ul>
+<li>bug 3353 jan2018: basically wontfixed</li>
+<li>too hard to diff and recover - even if kube knows how to do this</li>
+<li>but whatever, can deal? first time thing right?</li>
+<li>yeah, cluster recovery bit of a pain, but w/e</li>
+<li>however...</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/guesswork.gif" data-background-size="100% auto" style="color: #2fa;" -->
+
+<div style="position: relative; top: -320px; font-size: 36px">helm upgrade --wait --timeout=300</div>
+
+<aside class="notes"><ul>
+<li>helm upgrade --wait can also proc this: bug 4387 jul2018 open</li>
+<li>bad because similar to initial failure =&gt; needs purge.</li>
+<li>History LIMIT &lt;- why: helm ls</li>
+<li>We only needed simple bool for notifies; link to logs + job in channel!</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/what.gif" data-background-size="100% auto" style="color: #2fa;" -->
+
+<div style="position: relative; top: -320px; font-size: 36px">please wait <i>n</i> seconds</div>
+
+<aside class="notes"><ul>
+<li>just poll rsets direct, but how long to wait?</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template">
+worst case timeout
+
+```rust
+fn estimate_wait_time(&self) -> u32 {
+  let iterations = self.estimate_rollout_iterations();
+  let delay = self.health.wait; // == initialDelaySeconds
+  let size = self.imageSize; // in MB
+  let pulltime = max(60, size*90/512); // 90s / 512MB ok ?
+  (delay + pulltime) * iterations
+}
+```
+
+<aside class="notes"><ul>
+<li>only like 3 factors:</li>
+<li>cycles: 8 pods, 4 cycles, but 100% surge =&gt; 1 cycle</li>
+<li>initialDelaySecs (probe), kube will wait at least this long</li>
+<li>finger in air estimate for network..</li>
+<li>how to compute; cycles*estimated(pull+upgrade)</li>
+<li>know how to upgrade, wait. polling rs exercise for the reader.</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+Reconciliation: take 1
+
+```bash
+for s in $(shipcat list-services -r {region}); do
+  shipcat values $s -s | helm upgrade basechart $s --install
+done
+```
+
+<aside class="notes"><ul>
+<li>pseudocode from now on; but actual shipcat commands</li>
+<li>no indication that you actually upgraded anything, helm upgrade returns</li>
+<li>no way to notify about successful configurations (since no change)</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+Reconciliation: take 2
+
+```bash
+for s in $(shipcat list-services -r {region}); do
+  shipcat apply $s
+done
+```
+
+<aside class="notes"><ul>
+<li>apply here is a wrapper around helm diff and helm upgrade</li>
+<li>upgrade iff diff is non-empty</li>
+<li>=&gt; can notify on every upgrade we start - success/fail if wait succeeded</li>
+<li>helm diff is slow, need to fetch all secrets</li>
+<li>tiller has internal queue, can&#39;t scale</li>
+<li>can parallelize this (ampersand, but pooled - but numjobs scales with tiller)</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+Reconciliation: take 3
+
+```bash
+for s in $(shipcat list-services -r {region}); do
+  res=$(shipcat crd $s | k apply -f -)
+  if [[ $res =~ "configured|created" ]]; do
+    shipcat apply $s
+  fi
+done
+```
+
+<aside class="notes"><ul>
+<li>one job like this for every region spun off after merging to manifests</li>
+<li>1 min to apply crds for 300 svcs (limited by wait time)</li>
+<li>avoids helm diff everything - crds are super quick to construct and apply</li>
+<li>don&#39;t get auto-secret propagation</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+Reconciliation: take 4
+
+```bash
+for s in $(shipcat list-services -r {region}); do
+  res=$(shipcat crd $s | k apply -f -)
+  if [[ $res =~ "configured|created" ]]; do
+    shipcat template $s -s | k apply -f -lapp=$s --prune -
+  fi
+done
+```
+
+<aside class="notes"><ul>
+<li>tiller free - can direct to arbitrary namespaces</li>
+<li>crd based ones =&gt; two sets =&gt; auto-gc</li>
+<li>crd controlled &lt;= owner refs future</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+Reconciliation: take operator?
+
+```bash
+for s in $(shipcat list-services -r {region}); do
+  shipcat crd $s | k apply -f -
+done
+```
+
+<aside class="notes"><ul>
+<li>write you a tiller</li>
+<li>want to be careful with that because tiller == escalation machine</li>
+<li>even if rbac namespace tiller; helm access =&gt; tillers access</li>
+<li>access to special operations?</li>
+<li>logs? storage, history apis, retries?</li>
+<li>currently piggy backing on ci</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template">
+<!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+
+Do YOU need tiller? helm?
+
+<ul>
+  <li class="fragment highlight-red">rollbacks</li>
+  <li class="fragment highlight-red">grouping resources</li>
+  <li class="fragment highlight-red">diffs</li>
+  <li class="fragment highlight-red">single source of truth?</li>
+  <li class="fragment highlight-green">templating</li>
+</li>
+
+<aside class="notes"><ul>
+<li>rollbacks -&gt; unsafe illusion (cant rollback db) -&gt; <code>git backout</code></li>
+<li>grouping resources together -&gt; owner refs || labels.. (<code>apply --prune -lapp</code>)</li>
+<li>diffing (helm diff plugin) -&gt; kube diff (1.13)</li>
+<li>gitops style repos with helm =&gt; 3 sources of truth (2 gateways for bugs)</li>
+<li>templating -&gt; a totally sane industry standard</li>
+<li>seriously; start with helm templates, just don&#39;t use tiller, pipe.</li>
+</ul>
+</aside></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-image="/applause.gif" data-background-size="100% auto" class="color"--></script></section><section  data-markdown><script type="text/template"><!-- .slide: data-background-color="#353535" class="center color" style="text-align: left;" -->
+
+## Thank you
+
+<br/>
+- Eirik - [github.com/clux](https://github.com/clux) - [clux.dev](https://clux.dev)
+- Babylon Health - [babylonhealth.com](https://babylonhealth.com)
+
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 0px" />
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 140px" />
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 280px" />
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 420px" />
+<img src="./babylon.png" style="border: 0px; width: 120px; position: absolute; top: 300px; left: 560px" />
+</script></section></div>
+        </div>
+
+        <script src="./lib/js/head.min.js"></script>
+        <script src="./js/reveal.js"></script>
+
+        <script>
+            function extend() {
+              var target = {};
+              for (var i = 0; i < arguments.length; i++) {
+                var source = arguments[i];
+                for (var key in source) {
+                  if (source.hasOwnProperty(key)) {
+                    target[key] = source[key];
+                  }
+                }
+              }
+              return target;
+            }
+
+            // Optional libraries used to extend on reveal.js
+            var deps = [
+              { src: './lib/js/classList.js', condition: function() { return !document.body.classList; } },
+              { src: './plugin/markdown/marked.js', condition: function() { return !!document.querySelector('[data-markdown]'); } },
+              { src: './plugin/markdown/markdown.js', condition: function() { return !!document.querySelector('[data-markdown]'); } },
+              { src: './plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+              { src: './plugin/zoom-js/zoom.js', async: true },
+              { src: './plugin/notes/notes.js', async: true },
+              { src: './plugin/math/math.js', async: true }
+            ];
+
+            // default options to init reveal.js
+            var defaultOptions = {
+              controls: true,
+              progress: true,
+              history: true,
+              center: true,
+              transition: 'default', // none/fade/slide/convex/concave/zoom
+              dependencies: deps
+            };
+
+            // options from URL query string
+            var queryOptions = Reveal.getQueryHash() || {};
+
+            var options = {};
+            options = extend(defaultOptions, options, queryOptions);
+        </script>
+
+
+        <script>
+          Reveal.initialize(options);
+        </script>
+    </body>
+</html>
