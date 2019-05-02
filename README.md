@@ -9,4 +9,3 @@ https://www.eventbrite.co.uk/e/london-devops-43-facebook-registration-6074398790
 npm i -g reveal-md
 reveal-md slides.md
 ```
-# facebook-devops-helm-rant
